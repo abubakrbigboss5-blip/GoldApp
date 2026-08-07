@@ -1,15 +1,15 @@
 {
   "name": "gold-app",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "حاسبة المدخرات والذهب",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "axios": "^1.19.0",
     "express": "^5.2.1"
