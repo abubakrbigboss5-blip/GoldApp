@@ -24,12 +24,12 @@ app.get('/api/gold', async (req, res) => {
         console.log('المصدر الأول لم يستجب، جاري تجربة المصدر الثاني...');
     }
 
-    // المصدر الثاني الاحتياطي
+    // المصدر الثاني (احتياطي)
     if (!ouncePrice) {
         try {
             const res2 = await axios.get('https://open.er-api.com/v6/latest/USD', { timeout: 4000 });
             if (res2.data && res2.data.rates && res2.data.rates.XAU) {
-                ouncePrice = 1 / res3.data.rates.XAU;
+                ouncePrice = 1 / res2.data.rates.XAU;
             }
         } catch (e) {
             console.log('جميع المصادر لم تستجب');
@@ -37,13 +37,12 @@ app.get('/api/gold', async (req, res) => {
     }
 
     if (ouncePrice > 0) {
-        const gramPrice24 = ouncePrice / 31.1034768; // جرام عيار 24
-        return res.json({ success: true, pricePerGram24: gramPrice24 });
+        return res.json({ success: true, ouncePriceUSD: ouncePrice });
     } else {
-        return res.status(500).json({ success: false, message: 'تعذر جلب السعر حالياً' });
+        return res.status(500).json({ success: false, message: 'تعذر جلب سعر الذهب حالياً' });
     }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
