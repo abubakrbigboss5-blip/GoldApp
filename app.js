@@ -1,25 +1,30 @@
 let ouncePriceUSD = 0;
 
-// جلب سعر الأونصة العالمي عند فتح الصفحة
 async function fetchGoldPrice() {
     const statusEl = document.getElementById('status');
-    statusEl.innerText = 'جاري جلب سعر الذهب العالمي...';
+    if (statusEl) {
+        statusEl.innerText = 'جاري جلب سعر الذهب العالمي...';
+        statusEl.style.color = '#7f8c8d';
+    }
 
     try {
         const res = await fetch('/api/gold');
         const data = await res.json();
 
-        if (data.success) {
+        if (data.success && data.ouncePriceUSD) {
             ouncePriceUSD = data.ouncePriceUSD;
-            statusEl.innerText = 'تم تحديث سعر الذهب بنجاح';
-            statusEl.style.color = '#27ae60';
+            if (statusEl) {
+                statusEl.innerText = `تم تحديث سعر الذهب ($${ouncePriceUSD.toFixed(2)} للأونصة)`;
+                statusEl.style.color = '#27ae60';
+            }
         } else {
-            statusEl.innerText = 'تعذر جلب سعر الذهب، يرجى إعادة المحاولة';
-            statusEl.style.color = '#e74c3c';
+            throw new Error('فشل جلب السعر');
         }
     } catch (err) {
-        statusEl.innerText = 'خطأ في الاتصال بالخادم';
-        statusEl.style.color = '#e74c3c';
+        if (statusEl) {
+            statusEl.innerText = 'تعذر جلب السعر المباشر، يرجى إعادة المحاولة';
+            statusEl.style.color = '#e74c3c';
+        }
     }
 }
 
@@ -32,26 +37,23 @@ function calculateGoldPrices() {
     const sdgSavings = parseFloat(document.getElementById('sdgSavings').value) || 0;
 
     if (usdRate <= 0) {
-        alert('يرجى إدخال سعر صرف الدولار مقابل الجنيه (SDG)');
+        alert('يرجى إدخال سعر صرف الدولار (SDG)');
         return;
     }
 
     if (ouncePriceUSD <= 0) {
-        alert('لم يتم جلب سعر الذهب العالمي بعد، يرجى الانتظار');
+        alert('لم يتم جلب سعر الذهب بعد، يرجى الانتظار أو تحديث الصفحة');
         return;
     }
 
-    // حساب أسعار الجرام بالدولار والجنيه
-    // أونصة الذهب النقي 24 = 31.1034768 جرام
+    // أونصة الذهب النقي = 31.1034768 جرام
     const gram24USD = ouncePriceUSD / 31.1034768;
-    // عيار 24 النقاء المقبول تجاريًا (995)
-    const gram24_995_USD = gram24USD * (995 / 1000);
+    const gram24_995_USD = gram24USD * 0.995;
     const gram21USD = gram24USD * (21 / 24);
 
     const gram24SDG = gram24_995_USD * usdRate;
     const gram21SDG = gram21USD * usdRate;
 
-    // حساب القيمة المالية لكل أصل
     const valG21 = g21Amount * gram21SDG;
     const valG24 = g24Amount * gram24SDG;
     const valUsd = usdSavings * usdRate;
@@ -59,12 +61,10 @@ function calculateGoldPrices() {
 
     const grandTotal = valG21 + valG24 + valUsd + valSdg;
 
-    // عرض الأسعار الأساسية
     document.getElementById('ouncePriceUsd').innerText = `$${ouncePriceUSD.toFixed(2)}`;
     document.getElementById('g24').innerText = `${Math.round(gram24SDG).toLocaleString()} SDG`;
     document.getElementById('g21').innerText = `${Math.round(gram21SDG).toLocaleString()} SDG`;
 
-    // عرض تفاصيل المحفظة
     document.getElementById('valG21').innerText = `${Math.round(valG21).toLocaleString()} SDG`;
     document.getElementById('valG24').innerText = `${Math.round(valG24).toLocaleString()} SDG`;
     document.getElementById('valUsd').innerText = `${Math.round(valUsd).toLocaleString()} SDG`;
@@ -75,5 +75,4 @@ function calculateGoldPrices() {
     document.getElementById('results').style.display = 'block';
 }
 
-// تشغيل جلب السعر عند التحميل
-window.onload = fetchGoldPrice;
+window.addEventListener('DOMContentLoaded', fetchGoldPrice);
