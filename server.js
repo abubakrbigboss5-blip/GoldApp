@@ -1,11 +1,17 @@
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 const app = express();
 
-// استخدام متغير البيئة الخاص بالمنصة أو المنفذ 3000 للاختبار المحلي
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static('public'));
+// خدمة الملفات الثابتة من المجلد الرئيسي
+app.use(express.static(__dirname));
+
+// التوجيه للصفحة الرئيسية عند فتح الرابط
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 app.get('/api/gold', async (req, res) => {
     try {
@@ -18,10 +24,6 @@ app.get('/api/gold', async (req, res) => {
     }
 });
 
-// ربط الخادم بـ '0.0.0.0' للسماح باستقبال الطلبات الخارجية على Render
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n=================================`);
-    console.log(`🚀 تم تحديث وتشغيل الخادم بنجاح!`);
-    console.log(`📱 Running on port: ${PORT}`);
-    console.log(`=================================\n`);
+    console.log(`Server running on port ${PORT}`);
 });
