@@ -1,7 +1,9 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
-const PORT = 3000;
+
+// استخدام متغير البيئة الخاص بالمنصة أو المنفذ 3000 للاختبار المحلي
+const PORT = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 
@@ -16,9 +18,10 @@ app.get('/api/gold', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+// ربط الخادم بـ '0.0.0.0' للسماح باستقبال الطلبات الخارجية على Render
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n=================================`);
     console.log(`🚀 تم تحديث وتشغيل الخادم بنجاح!`);
-    console.log(`📱 افتح المتصفح: http://localhost:${PORT}`);
+    console.log(`📱 Running on port: ${PORT}`);
     console.log(`=================================\n`);
 });
