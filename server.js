@@ -1,34 +1,45 @@
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static('public'));
+// التأكد من الوصول لمجلد public بغض النظر عن طريقة التشغيل
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/gold', async (req, res) => {
+    // المصدر الأول: Binance API
     try {
-        // جلب سعر PAXG (الذهب) مقابل الدولار من Binance API
         const response = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT', {
             timeout: 5000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+            headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-
         const price = parseFloat(response.data.price);
-        
-        if (!price || isNaN(price)) {
-            throw new Error('سعر غير صالح');
+        if (price && !isNaN(price)) {
+            return res.json({ success: true, price: price });
         }
-
-        res.json({ success: true, price: price });
-    } catch (error) {
-        console.error('Error fetching gold price:', error.message);
-        res.status(500).json({ success: false, message: 'فشل جلب سعر الذهب' });
+    } catch (binanceError) {
+        console.log('Binance API failed, trying fallback source...');
     }
+
+    // المصدر الاحتياطي الثاني: Gold Price Alternative API
+    try {
+        const fallbackResponse = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd', {
+            timeout: 5000,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        const fallbackPrice = fallbackResponse.data['pax-gold']?.usd;
+        if (fallbackPrice) {
+            return res.json({ success: true, price: fallbackPrice });
+        }
+    } catch (fallbackError) {
+        console.error('All APIs failed to fetch gold price.');
+    }
+
+    return res.status(500).json({ success: false, message: 'تعذر جلب سعر الذهب حالياً' });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
