@@ -9,28 +9,35 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/gold', async (req, res) => {
     try {
-        // مصدر مباشر ومفتوح لسعر الأونصة بالدولار (GoldPrice.org)
-        const response = await axios.get('https://data-asg.goldprice.org/dbWRzs/chart/XAU/USD', {
-            timeout: 7000,
+        // نقطة نهاية جلب سعر Pax Gold عبر مصادر متعددة مرادفة
+        const response = await axios.get('https://api.coingecko.com/api/v3/coins/pax-gold', {
+            timeout: 8000,
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Referer': 'https://goldprice.org/'
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
             }
         });
 
-        // استخراج سعر أونصة الذهب الحالي
-        const items = response.data?.items;
-        if (items && items.length > 0) {
-            const ouncePrice = items[0].xauPrice;
-            console.log(`Gold price fetched successfully: $${ouncePrice}`);
-            return res.json({ success: true, price: ouncePrice });
+        const price = response.data?.market_data?.current_price?.usd;
+
+        if (price) {
+            return res.json({ success: true, price: price });
+        }
+        throw new Error('Invalid payload');
+    } catch (error) {
+        // Fallback إلى API المفتوح الخاص بـ Yahoo Finance
+        try {
+            const yahooRes = await axios.get('https://query1.finance.yahoo.com/v8/finance/chart/GC=F', {
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            const price = yahooRes.data?.chart?.result[0]?.meta?.regularMarketPrice;
+            if (price) {
+                return res.json({ success: true, price: price });
+            }
+        } catch (err) {
+            console.error('Yahoo fallback error:', err.message);
         }
 
-        throw new Error('بيانات السعر غير متوفرة في استجابة API');
-    } catch (error) {
-        console.error('Error fetching gold price:', error.message);
-        return res.status(500).json({ success: false, message: 'تعذر جلب سعر الذهب حالياً' });
+        return res.status(500).json({ success: false, message: 'تعذر جلب سعر الذهب' });
     }
 });
 
