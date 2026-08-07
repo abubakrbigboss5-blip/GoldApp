@@ -13,21 +13,21 @@ app.get('/', (req, res) => {
 
 app.get('/api/gold', async (req, res) => {
     try {
-        // جلب سعر الذهب المباشر (PAXG/USDT) من Binance API
-        const response = await axios.get('https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT');
-        const ouncePrice = parseFloat(response.data.price);
+        // استخدام API أكثر استقرارًا لأسعار العملات والمعادن (ExchangeRate-API)
+        const response = await axios.get('https://api.exchangerate-api.com/v4/latest/XAU');
         
-        // تحويل أونصة الذهب لجرام عيار 24 (1 أونصة = 31.1034768 جرام)
-        const gramPrice24 = ouncePrice / 31.1034768;
+        // 1 أونصة = 31.1034768 جرام
+        const pricePerOunceUSD = 1 / response.data.rates.USD;
+        const gramPrice24 = pricePerOunceUSD / 31.1034768;
 
         res.json({ 
             success: true, 
-            price: gramPrice24,
+            price: gramPrice24, // للتوافق مع الكود القديم
             pricePerGram24: gramPrice24 
         });
     } catch (error) {
         console.error('API Fetch Error:', error.message);
-        res.status(500).json({ success: false, message: 'تعذر جلب السعر المباشر' });
+        res.status(500).json({ success: false, message: 'فشل جلب سعر الذهب' });
     }
 });
 
