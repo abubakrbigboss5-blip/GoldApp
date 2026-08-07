@@ -3,56 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حاسبة أسعار الذهب</title>
+    <title>حاسبة مدخرات الذهب</title>
     <style>
         * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
         body { background: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; max-width: 420px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; max-width: 450px; }
         h2 { text-align: center; color: #d4af37; margin-top: 0; }
-        .status { background: #fff8e7; border: 1px solid #ffe082; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 15px; color: #b78103; font-weight: bold; font-size: 14px; }
+        .status { background: #fff8e7; border: 1px solid #ffe082; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 20px; color: #b78103; font-weight: bold; font-size: 14px; }
         .field { margin-bottom: 12px; }
         label { display: block; margin-bottom: 4px; font-size: 14px; color: #333; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; }
         button { width: 100%; background: #d4af37; color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; }
         button:hover { background: #b89528; }
-        .result { margin-top: 15px; padding: 12px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 6px; display: none; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
-        .total { font-weight: bold; color: #1b5e20; border-top: 1px solid #a5d6a7; padding-top: 6px; margin-top: 6px; }
+        .result { margin-top: 20px; padding: 15px; background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 6px; display: none; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .total { font-weight: bold; color: #1b5e20; border-top: 1px solid #a5d6a7; padding-top: 8px; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>حاسبة أسعار الذهب</h2>
-    <div class="status" id="status-box">جاري جلب السعر...</div>
+    <h2>حاسبة قيمة المدخرات</h2>
+    <div class="status" id="status-box">جاري جلب سعر الذهب المباشر...</div>
+
+    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">أدخل أوزان الذهب التي تمتلكها بالجرام لكل عيار:</p>
 
     <div class="field">
-        <label>الوزن (جرام):</label>
-        <input type="number" id="weight" placeholder="أدخل الوزن" min="0.1" step="any">
+        <label>وزن عيار 24 (سبائك / ذهب نقي):</label>
+        <input type="number" id="w24" placeholder="0" min="0" step="any">
     </div>
 
     <div class="field">
-        <label>العيار:</label>
-        <select id="karat">
-            <option value="24">عيار 24</option>
-            <option value="22">عيار 22</option>
-            <option value="21" selected>عيار 21</option>
-            <option value="18">عيار 18</option>
-        </select>
+        <label>وزن عيار 22:</label>
+        <input type="number" id="w22" placeholder="0" min="0" step="any">
     </div>
 
     <div class="field">
-        <label>المصنعية للجرام ($):</label>
-        <input type="number" id="making" value="0" min="0" step="any">
+        <label>وزن عيار 21:</label>
+        <input type="number" id="w21" placeholder="0" min="0" step="any">
     </div>
 
-    <button onclick="calculate()">احسب الإجمالي</button>
+    <div class="field">
+        <label>وزن عيار 18:</label>
+        <input type="number" id="w18" placeholder="0" min="0" step="any">
+    </div>
+
+    <button onclick="calculateSavings()">احسب قيمة المدخرات الكلية</button>
 
     <div class="result" id="result-box">
-        <div class="row"><span>سعر الجرام المختار:</span> <span id="gram-price">$0</span></div>
-        <div class="row"><span>إجمالي الذهب الصافي:</span> <span id="gold-total">$0</span></div>
-        <div class="row"><span>إجمالي المصنعية:</span> <span id="making-total">$0</span></div>
-        <div class="row total"><span>الإجمالي الكلي:</span> <span id="grand-total">$0</span></div>
+        <div class="row"><span>إجمالي الوزن الصافي (مكافئ 24):</span> <span id="pure-weight">0 جرام</span></div>
+        <div class="row total"><span>القيمة المالية الكلية للمدخرات:</span> <span id="total-value">$0</span></div>
     </div>
 </div>
 
@@ -69,37 +69,35 @@
                 gram24Price = data.pricePerGram24;
                 statusBox.innerText = `سعر جرام عيار 24 الحالي: $${gram24Price.toFixed(2)}`;
             } else {
-                statusBox.innerText = 'عذرًا، تعذر جلب السعر حاليًا';
+                statusBox.innerText = 'عذرًا، تعذر جلب السعر المباشر حاليًا';
             }
         } catch (err) {
             statusBox.innerText = 'خطأ في الاتصال بالخادم';
         }
     }
 
-    function calculate() {
-        const weight = parseFloat(document.getElementById('weight').value);
-        const karat = parseInt(document.getElementById('karat').value);
-        const making = parseFloat(document.getElementById('making').value) || 0;
+    function calculateSavings() {
+        const w24 = parseFloat(document.getElementById('w24').value) || 0;
+        const w22 = parseFloat(document.getElementById('w22').value) || 0;
+        const w21 = parseFloat(document.getElementById('w21').value) || 0;
+        const w18 = parseFloat(document.getElementById('w18').value) || 0;
 
-        if (!weight || weight <= 0) {
-            alert('يرجى إدخال وزن صحيح');
+        if (w24 === 0 && w22 === 0 && w21 === 0 && w18 === 0) {
+            alert('يرجى إدخال وزن في عيار واحد على الأقل');
             return;
         }
 
         if (gram24Price === 0) {
-            alert('يرجى الانتظار حتى يتم جلب السعر المباشر');
+            alert('يرجى الانتظار حتى يتم جلب سعر الذهب المباشر');
             return;
         }
 
-        const selectedGramPrice = (gram24Price * karat) / 24;
-        const totalGold = selectedGramPrice * weight;
-        const totalMaking = making * weight;
-        const grandTotal = totalGold + totalMaking;
+        // تحويل كافة الأوزان إلى ما يعادلها من الذهب الصافي (عيار 24)
+        const pure24Equiv = w24 + (w22 * 22 / 24) + (w21 * 21 / 24) + (w18 * 18 / 24);
+        const totalValueUSD = pure24Equiv * gram24Price;
 
-        document.getElementById('gram-price').innerText = `$${selectedGramPrice.toFixed(2)}`;
-        document.getElementById('gold-total').innerText = `$${totalGold.toFixed(2)}`;
-        document.getElementById('making-total').innerText = `$${totalMaking.toFixed(2)}`;
-        document.getElementById('grand-total').innerText = `$${grandTotal.toFixed(2)}`;
+        document.getElementById('pure-weight').innerText = `${pure24Equiv.toFixed(2)} جرام`;
+        document.getElementById('total-value').innerText = `$${totalValueUSD.toFixed(2)}`;
 
         document.getElementById('result-box').style.display = 'block';
     }
