@@ -5,22 +5,26 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// خدمة الملفات الثابتة من المجلد الرئيسي
 app.use(express.static(__dirname));
 
-// التوجيه للصفحة الرئيسية عند فتح الرابط
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// مسار جلب السعر مع تحسين معالجة الأخطاء
 app.get('/api/gold', async (req, res) => {
     try {
         const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd', {
             headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-        res.json({ success: true, price: response.data['pax-gold'].usd });
+        const ouncePrice = response.data['pax-gold'].usd;
+        // تحويل أونصة الذهب لجرام عيار 24 (الأونصة = 31.1034768 جرام)
+        const gramPrice24 = ouncePrice / 31.1034768;
+        
+        res.json({ success: true, pricePerGram24: gramPrice24 });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'فشل جلب سعر الذهب' });
+        console.error('API Error:', error.message);
+        res.status(500).json({ success: false, message: 'تعذر جلب السعر المباشر' });
     }
 });
 
