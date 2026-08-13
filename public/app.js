@@ -1,102 +1,91 @@
-const TROY_OUNCE_GRAMS = 31.1034768;
+let ouncePriceUSD = 0;
+let eurUsdRate = 0;
 
-// حفظ البيانات في LocalStorage لضمان عدم تغيرها عند الـ Refresh
-function saveInputs() {
-    const data = {
-        usdRate: document.getElementById('usdRate').value,
-        g21Amount: document.getElementById('g21Amount').value,
-        g24Amount: document.getElementById('g24Amount').value,
-        usdSavings: document.getElementById('usdSavings').value,
-        sdgSavings: document.getElementById('sdgSavings').value
-    };
-    localStorage.setItem('goldAppSavedData', JSON.stringify(data));
-}
-
-// استرجاع المدخلات المحفوظة عند فتح الصفحة
-function loadInputs() {
-    const saved = localStorage.getItem('goldAppSavedData');
-    if (saved) {
-        const data = JSON.parse(saved);
-        document.getElementById('usdRate').value = data.usdRate || 2000;
-        document.getElementById('g21Amount').value = data.g21Amount || 0;
-        document.getElementById('g24Amount').value = data.g24Amount || 0;
-        document.getElementById('usdSavings').value = data.usdSavings || 0;
-        document.getElementById('sdgSavings').value = data.sdgSavings || 0;
-    } else {
-        document.getElementById('usdRate').value = 2000;
+async function fetchGoldPrice() {
+    const statusEl = document.getElementById('status');
+    if (statusEl) {
+        statusEl.innerText = 'جاري جلب أسعار الذهب والعملات...';
+        statusEl.style.color = '#7f8c8d';
     }
-}
 
-async function fetchGoldPriceUSD() {
-    const statusDiv = document.getElementById('status');
-    statusDiv.innerText = "جاري تحديث سعر الذهب المباشر...";
     try {
-        const response = await fetch('/api/gold');
-        const data = await response.json();
-        
-        if (!data.success) throw new Error(data.message);
-        
-        statusDiv.innerText = "تم تحديث السعر بنجاح";
-        return data.price;
-    } catch (error) {
-        statusDiv.innerText = "تعذر التحديث المباشر، تحقق من الاتصال";
-        return null;
+        const res = await fetch('/api/gold');
+        const data = await res.json();
+
+        if (data.success && data.ouncePriceUSD) {
+            ouncePriceUSD = data.ouncePriceUSD;
+            eurUsdRate = data.eurUsdRate || 1.08;
+
+            if (statusEl) {
+                statusEl.innerText = `تم تحديث الأسعار (1€ = $${eurUsdRate.toFixed(3)})`;
+                statusEl.style.color = '#27ae60';
+            }
+        } else {
+            throw new Error('فشل جلب البيانات');
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.innerText = 'تعذر جلب السعر المباشر، يرجى إدخال البيانات والتجربة';
+            statusEl.style.color = '#e74c3c';
+        }
     }
 }
 
-async function calculateGoldPrices() {
-    saveInputs(); // حفظ القيمة الحالية للمدخلات
-
+function calculateGoldPrices() {
     const usdRate = parseFloat(document.getElementById('usdRate').value) || 0;
     const g21Amount = parseFloat(document.getElementById('g21Amount').value) || 0;
     const g24Amount = parseFloat(document.getElementById('g24Amount').value) || 0;
     const usdSavings = parseFloat(document.getElementById('usdSavings').value) || 0;
+    const eurSavings = parseFloat(document.getElementById('eurSavings').value) || 0;
     const sdgSavings = parseFloat(document.getElementById('sdgSavings').value) || 0;
 
     if (usdRate <= 0) {
-        alert("يرجى إدخال سعر صرف صحيح للدولار");
+        alert('يرجى إدخال سعر صرف الدولار (SDG)');
         return;
     }
 
-    const ouncePriceUSD = await fetchGoldPriceUSD();
-    if (!ouncePriceUSD) return;
+    if (ouncePriceUSD <= 0) {
+        alert('لم يتم جلب الأسعار المباشرة بعد، يرجى الانتظار أو التحديث');
+        return;
+    }
 
-    // حسابات الجرام المحلي
-    const gram24PureUSD = ouncePriceUSD / TROY_OUNCE_GRAMS;
-    const gram24_995_Local = (gram24PureUSD * 0.995) * usdRate;
-    const gram21_Local = (gram24PureUSD * (21 / 24)) * usdRate;
+    // 1. حساب أسعار الجرام بالدولار والجنيه
+    const gram24USD = ouncePriceUSD / 31.1034768;
+    const gram24_995_USD = gram24USD * 0.995;
+    const gram21USD = gram24USD * (21 / 24);
 
-    // حساب قيم المدخرات بالجنيه
-    const valueG21 = g21Amount * gram21_Local;
-    const valueG24 = g24Amount * gram24_995_Local;
-    const valueUSD = usdSavings * usdRate;
-    const valueSDG = sdgSavings;
+    const gram24SDG = gram24_995_USD * usdRate;
+    const gram21SDG = gram21USD * usdRate;
 
-    const totalSavings = valueG21 + valueG24 + valueUSD + valueSDG;
+    // 2. تحويل اليورو إلى دولار ومن ثم إلى جنيه سوداني
+    // قيمة اليورو بالدولار = كمية اليورو × سعر صرف EUR/USD
+    const eurInUSD = eurSavings * eurUsdRate;
+    const valEurSDG = eurInUSD * usdRate;
 
-    // عرض نتائج الأسعار
-    document.getElementById('ouncePriceUsd').innerText = `$${ouncePriceUSD.toLocaleString(undefined, {maximumFractionDigits: 2})}`;
-    document.getElementById('g24').innerText = `${gram24_995_Local.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
-    document.getElementById('g21').innerText = `${gram21_Local.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
+    // 3. حساب باقي الأصول بالجنيه
+    const valG21 = g21Amount * gram21SDG;
+    const valG24 = g24Amount * gram24SDG;
+    const valUsd = usdSavings * usdRate;
+    const valSdg = sdgSavings;
 
-    // عرض تفاصيل المحفظة
-    document.getElementById('valG21').innerText = `${valueG21.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
-    document.getElementById('valG24').innerText = `${valueG24.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
-    document.getElementById('valUsd').innerText = `${valueUSD.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
-    document.getElementById('valSdg').innerText = `${valueSDG.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
-    
-    // الإجمالي النهائي
-    document.getElementById('totalSavings').innerText = `${totalSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} SDG`;
+    const grandTotal = valG21 + valG24 + valUsd + valEurSDG + valSdg;
+
+    // عرض النشرة والأسعار
+    document.getElementById('ouncePriceUsd').innerText = `$${ouncePriceUSD.toFixed(2)}`;
+    document.getElementById('eurUsdRate').innerText = `$${eurUsdRate.toFixed(3)}`;
+    document.getElementById('g24').innerText = `${Math.round(gram24SDG).toLocaleString()} SDG`;
+    document.getElementById('g21').innerText = `${Math.round(gram21SDG).toLocaleString()} SDG`;
+
+    // عرض تفاصيل قيم الأصول
+    document.getElementById('valG21').innerText = `${Math.round(valG21).toLocaleString()} SDG`;
+    document.getElementById('valG24').innerText = `${Math.round(valG24).toLocaleString()} SDG`;
+    document.getElementById('valUsd').innerText = `${Math.round(valUsd).toLocaleString()} SDG`;
+    document.getElementById('valEur').innerText = `${Math.round(valEurSDG).toLocaleString()} SDG`;
+    document.getElementById('valSdg').innerText = `${Math.round(valSdg).toLocaleString()} SDG`;
+
+    document.getElementById('totalSavings').innerText = `${Math.round(grandTotal).toLocaleString()} SDG`;
 
     document.getElementById('results').style.display = 'block';
 }
 
-// إضافة الحفظ التلقائي للفرس أثناء الكتابة
-document.querySelectorAll('input').forEach(input => {
-    input.addEventListener('input', saveInputs);
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-    loadInputs();
-    calculateGoldPrices();
-});
+window.addEventListener('DOMContentLoaded', fetchGoldPrice);
